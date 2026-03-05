@@ -54,6 +54,58 @@
 
         #bomb-alert { display: none; position: absolute; top: 0; left: 0; width: 100%; height: 100%; background: rgba(239, 68, 68, 0.9); z-index: 50; justify-content: center; align-items: center; color: white; font-size: 3rem; font-weight: bold; flex-direction: column; }
         #victory-screen { display: none; }
+        /* --- התאמה למובייל (מסכים קטנים) --- */
+        @media (max-width: 600px) {
+            .container {
+                padding: 20px 15px; /* הקטנת הריווח הפנימי כדי לחסוך מקום */
+                border-radius: 15px;
+            }
+            h1 { font-size: 1.8rem; }
+            .subtitle { font-size: 1rem; }
+            
+            /* הקטנת המילה עצמה שלא תחרוג מהמסך */
+            .word-display { 
+                font-size: 2.2rem; 
+                margin: 15px 0; 
+            }
+            .question-text { 
+                font-size: 1.1rem; 
+                padding: 8px 15px; 
+            }
+            
+            /* שורת הנתונים למעלה - שבירה לשורות כדי שלא יתנגשו */
+            .stats-row {
+                flex-wrap: wrap;
+                gap: 10px;
+                font-size: 1rem;
+                padding: 10px;
+                justify-content: center;
+            }
+            .stats-row > div { margin: 0 5px; }
+            #timer-box { font-size: 1.2rem; padding: 3px 10px; }
+            
+            /* כפתורי התשובות - הקטנת כתב וריווח */
+            .options-grid {
+                grid-template-columns: 1fr; /* כפתור אחד בשורה למניעת חיתוך טקסט */
+                gap: 10px;
+            }
+            button.opt-btn {
+                padding: 15px;
+                font-size: 1.1rem;
+            }
+
+            /* כפתורי ההצלה והדילוג - אחד מעל השני במקום אחד ליד השני */
+            .actions-zone {
+                flex-direction: column;
+                gap: 10px;
+            }
+            .action-btn { width: 100%; }
+
+            /* התאמת חלונות קופצים למובייל */
+            .modal-content { padding: 25px 15px; }
+            #bomb-alert { font-size: 1.5rem; text-align: center; padding: 15px; }
+            #bomb-alert div:first-child { font-size: 2rem; }
+        }
     </style>
 </head>
 <body>
