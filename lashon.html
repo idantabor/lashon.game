@@ -1,0 +1,416 @@
+<!DOCTYPE html>
+<html lang="he" dir="rtl">
+<head>
+    <meta charset="UTF-8">
+    <title>סימולטור בגרות בלשון</title>
+    <style>
+        :root {
+            --bg-color: #0f172a; --card-bg: #1e293b; --primary: #38bdf8; 
+            --success: #10b981; --danger: #ef4444; --warning: #f59e0b; 
+            --text-main: #f8fafc; --text-muted: #94a3b8;
+        }
+
+        body { font-family: 'Segoe UI', Tahoma, sans-serif; background: var(--bg-color); display: flex; justify-content: center; align-items: center; min-height: 100vh; margin: 0; padding: 20px; color: var(--text-main); }
+        .container { background: var(--card-bg); width: 100%; max-width: 800px; border-radius: 20px; box-shadow: 0 25px 50px -12px rgba(0,0,0,0.5); padding: 40px; text-align: center; border: 1px solid #334155; position: relative; overflow: hidden; }
+        
+        h1 { color: var(--primary); font-size: 2.5rem; margin-bottom: 10px; }
+        .subtitle { color: var(--text-muted); font-size: 1.2rem; margin-bottom: 30px; }
+
+        .menu-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 20px; margin-top: 30px; }
+        .exam-card { background: #334155; padding: 30px 20px; border-radius: 15px; cursor: pointer; border: 2px solid transparent; transition: all 0.2s; }
+        .exam-card:hover { border-color: var(--primary); transform: translateY(-5px); background: #475569; }
+        .exam-card h2 { margin: 0 0 10px 0; color: white; }
+        .exam-card p { margin: 0; color: var(--text-muted); font-size: 0.95rem; }
+
+        #main-game { display: none; }
+        
+        .stats-row { display: flex; justify-content: space-between; align-items: center; font-size: 1.2rem; font-weight: bold; background: #0f172a; padding: 15px 25px; border-radius: 12px; border: 1px solid #334155; position: relative; }
+        
+        #timer-box { display: none; background: var(--danger); color: white; padding: 5px 15px; border-radius: 8px; font-size: 1.5rem; font-weight: 900; animation: pulse 1s infinite; }
+        @keyframes pulse { 0% { transform: scale(1); } 50% { transform: scale(1.05); } 100% { transform: scale(1); } }
+
+        .progress-container { background: #334155; border-radius: 10px; height: 12px; margin: 20px 0; }
+        #progress-fill { width: 0%; height: 100%; background: var(--success); border-radius: 10px; transition: width 0.3s; }
+
+        .word-display { font-size: 3.5rem; font-weight: 800; color: white; margin: 20px 0; letter-spacing: 1px; }
+        .question-text { font-size: 1.4rem; color: var(--warning); font-weight: bold; margin-bottom: 30px; }
+        
+        .options-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(160px, 1fr)); gap: 15px; margin-bottom: 25px; }
+        button.opt-btn { padding: 18px; border: 2px solid #475569; border-radius: 12px; background: #1e293b; color: white; cursor: pointer; font-size: 1.2rem; font-weight: bold; transition: all 0.2s; }
+        button.opt-btn:hover:not(:disabled) { border-color: var(--primary); background: #334155; }
+
+        .streak-box { font-size: 1.5rem; color: var(--warning); min-width: 100px; }
+        .actions-zone { display: flex; gap: 15px; margin-top: 20px; border-top: 1px solid #334155; padding-top: 25px; }
+        .action-btn { flex: 1; border: none; padding: 15px; border-radius: 10px; font-size: 1.1rem; font-weight: bold; cursor: pointer; }
+        .skip-btn { background: #334155; color: white; }
+        .skip-btn:hover { background: #475569; }
+        .fifty-btn { background: var(--primary); color: #0f172a; }
+        .fifty-btn:disabled { background: #475569; color: #94a3b8; cursor: not-allowed; }
+
+        #feedback-modal { display: none; position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(15, 23, 42, 0.9); z-index: 100; justify-content: center; align-items: center; }
+        .modal-content { background: var(--card-bg); padding: 40px; border-radius: 20px; max-width: 500px; text-align: center; border-top: 8px solid var(--danger); box-shadow: 0 25px 50px rgba(0,0,0,0.5); }
+        .modal-content h2 { color: var(--danger); }
+        .close-modal-btn { background: var(--primary); color: #0f172a; border: none; padding: 12px 30px; border-radius: 8px; font-size: 1.1rem; font-weight: bold; margin-top: 20px; cursor: pointer; }
+
+        #bomb-alert { display: none; position: absolute; top: 0; left: 0; width: 100%; height: 100%; background: rgba(239, 68, 68, 0.9); z-index: 50; justify-content: center; align-items: center; color: white; font-size: 3rem; font-weight: bold; flex-direction: column; }
+        #victory-screen { display: none; }
+    </style>
+</head>
+<body>
+
+<div class="container" id="menu-screen">
+    <h1>הכנה לבגרות בלשון</h1>
+    <div class="subtitle">בחר.י את המבחן שתרצה.י לתרגל עכשיו. האם את.ה מוכנ.ה?</div>
+    <div class="menu-grid">
+        <div class="exam-card" onclick="startExam('verbs')"><h2>פועל וגזרות</h2><p>שורשים, בניינים וגזרות מורכבות.</p></div>
+        <div class="exam-card" onclick="startExam('numbers')"><h2>שם המספר</h2><p>זכר, נקבה, תאריכים וסמיכות.</p></div>
+        <div class="exam-card" onclick="startExam('mixed')"><h2>מבחן מסכם</h2><p>שילוב כל הנושאים להכנה מקסימלית.</p></div>
+    </div>
+</div>
+
+<div class="container" id="main-game">
+    <div id="bomb-alert"><div>⚠️ שלב פצצה הופעל! ⚠️</div><div style="font-size: 1.5rem; margin-top: 10px;">מעכשיו יש לך 15 שניות לכל שאלה</div></div>
+    <div class="stats-row">
+        <div>ניקוד: <span id="score" style="color: var(--success);">0</span></div>
+        <div id="timer-box">⏱️ <span id="time-left">15</span></div>
+        <div class="streak-box" id="streak-display"></div>
+        <div>דילוגים: <span id="skips-left" style="color: var(--danger);">5</span></div>
+    </div>
+    <div class="progress-container"><div id="progress-fill"></div></div>
+    <div id="game-content">
+        <div class="question-text" id="question-label">שאלה...</div>
+        <div class="word-display" id="target-word">טוען...</div>
+        <div class="options-grid" id="options-container"></div>
+        <div class="actions-zone">
+            <button class="action-btn fifty-btn" id="btn-5050" onclick="useFiftyFifty()">🪄 50/50 (פעם במבחן)</button>
+            <button class="action-btn skip-btn" onclick="skipCurrent()">⏭️ דלג.י (נשארו עוד <span id="skip-btn-count">5</span>)</button>
+        </div>
+    </div>
+</div>
+
+<div id="feedback-modal">
+    <div class="modal-content">
+        <h2 id="feedback-title">אופס, טעות! 😬</h2>
+        <h3 id="correct-ans-display" style="color: white;"></h3>
+        <p id="feedback-text" style="color: var(--text-muted); line-height: 1.6;"></p>
+        <button class="close-modal-btn" onclick="closeFeedbackAndContinue()">הבנתי, לשאלה הבאה!</button>
+    </div>
+</div>
+
+<div class="container" id="victory-screen">
+    <h1 style="color: var(--success); font-size: 3rem;">אלוף.ת הלשון!</h1>
+    <p style="font-size: 1.4rem; color: var(--text-muted); margin-bottom: 30px;">הגעת ל-100 נקודות במבחן הזה! את.ה מוכנ.ה לחלוטין לבגרות.</p>
+    <button class="action-btn fifty-btn" onclick="location.reload()" style="width: auto; padding: 15px 50px;">חזרה לתפריט הראשי</button>
+</div>
+
+<audio id="applause-snd" src="https://assets.mixkit.co/active_storage/sfx/2003/2003-preview.mp3"></audio>
+
+<script>
+    const exams = {
+        verbs: [
+            { word: "הִפִּיל", q: "מה השורש?", options: ["נ.פ.ל", "פ.י.ל", "ה.פ.ל", "פ.ל.ל"], ans: "נ.פ.ל", exp: "הדגש החזק בפ' מעיד על נ' שנבלעה (חפ\"נ)." },
+            { word: "נִמְצָא", q: "מה הגזרה?", options: ["נל\"א", "נל\"י/ה", "חפ\"נ", "שלמים"], ans: "נל\"א", exp: "האות א' בסוף נחה, שורש מ.צ.א." },
+            { word: "נָבוֹן", q: "מה הבניין?", options: ["נפעל", "קל", "הפעיל", "פועל"], ans: "נפעל", exp: "ע\"ו בהווה, נפעל מאופיין בצליל a-o." },
+            { word: "מִזְדַּקֵּן", q: "מה הבניין?", options: ["התפעל", "פיעל", "הפעיל", "נפעל"], ans: "התפעל", exp: "פ' הפועל היא ז', לכן חל שיכול עיצורים והידמות בקוליות (הִתְזַקֵּן -> מִזְדַּקֵּן)." },
+            { word: "הִצִּיעַ", q: "מה השורש?", options: ["י.צ.ע", "נ.צ.ע", "צ.ו.ע", "ה.צ.ע"], ans: "י.צ.ע", exp: "גזרת חפי\"צ! פעלים שמתחילים ב-י.צ מקבלים דגש ב-צ' בבניין הפעיל (כמו י.צ.ג, י.צ.ב)." },
+            { word: "יִפֹּל", q: "מה השורש?", options: ["נ.פ.ל", "פ.י.ל", "י.פ.ל", "פ.ל.ל"], ans: "נ.פ.ל", exp: "עתיד בניין קל. הדגש ב-פ' מעיד על ה-נ' שנפלה. (גזרת חפ\"נ)." },
+            { word: "נִזּוֹן", q: "מה הבניין?", options: ["נפעל", "קל", "פועל", "הפעיל"], ans: "נפעל", exp: "נפעל בהווה בגזרת ע\"ו. השורש הוא ז.ו.נ (כמו נָדוֹן, נָסוֹג)." },
+            { word: "מֵאִיר", q: "מה השורש?", options: ["א.ו.ר", "מ.א.ר", "א.י.ר", "י.א.ר"], ans: "א.ו.ר", exp: "בניין הפעיל הווה. כמו מֵקִים (ק.ו.ם) -> מֵאִיר (א.ו.ר)." },
+            { word: "נֶהֱנָה", q: "מה הבניין?", options: ["נפעל", "קל", "התפעל", "פיעל"], ans: "נפעל", exp: "בניין נפעל עבר. בגלל שהשורש מתחיל בגרונית (ה.נ.י/ה), התחילית מקבלת סגול." },
+            { word: "יַכִּיר", q: "מה השורש?", options: ["נ.כ.ר", "כ.ו.ר", "י.כ.ר", "ק.י.ר"], ans: "נ.כ.ר", exp: "הפעיל עתיד. הדגש ב-כ' מכסה על ה-נ' שחסרה (יַנְכִּיר -> יַכִּיר)." },
+            { word: "מוֹרֶה", q: "מה השורש?", options: ["י.ר.ה", "מ.ר.ה", "ר.ו.ה", "י.ר.ר"], ans: "י.ר.ה", exp: "הפעיל הווה בגזרת פ\"י + נל\"י/ה. ה-י' של השורש הפכה ל-ו' (מוֹ)." },
+            { word: "יִישַׁן", q: "מה הבניין?", options: ["קל", "נפעל", "פיעל", "הפעיל"], ans: "קל", exp: "עתיד בניין קל משורש י.ש.נ (גזרת פ\"י/פ\"א)." },
+            { word: "הִתְכּוֹנֵן", q: "מה השורש?", options: ["כ.ו.נ", "כ.נ.נ", "ת.כ.נ", "כ.נ.י"], ans: "כ.ו.נ", exp: "בניין התפעל בגזרת ע\"ו/י. האות ו' במרכז היא חלק מהשורש." },
+            { word: "הֵבִיא", q: "מה הבניין?", options: ["הפעיל", "קל", "נפעל", "הופעל"], ans: "הפעיל", exp: "הפעיל עבר. גזרה מורכבת: ע\"ו (ב.ו.א) יחד עם נל\"א." },
+            { word: "אֶשָּׂא", q: "מה השורש?", options: ["נ.ש.א", "ש.ו.א", "א.ש.א", "י.ש.א"], ans: "נ.ש.א", exp: "עתיד קל, גוף ראשון. ה-נ' נפלה (דגש ב-ש') וה-א' נחה." },
+            { word: "הוּטַל", q: "מה השורש?", options: ["ט.ו.ל", "ט.ל.ל", "ה.ט.ל", "י.ט.ל"], ans: "ט.ו.ל", exp: "הופעל עבר של גזרת ע\"ו. (כמו הוּקַם מ-ק.ו.ם)." },
+            { word: "תֵּצֵא", q: "מה השורש?", options: ["י.צ.א", "צ.ו.א", "ת.צ.א", "צ.י.א"], ans: "י.צ.א", exp: "בניין קל עתיד. שורש שמתחיל ב-י' ומסתיים ב-א'." },
+            { word: "הֻצַּג", q: "מה הבניין?", options: ["הופעל", "פועל", "נפעל", "הפעיל"], ans: "הופעל", exp: "תחילית הֻ מעידה על הופעל. השורש י.צ.ג (חפי\"צ)." },
+            { word: "הֻכָּה", q: "מה השורש?", options: ["נ.כ.ה", "ה.כ.ה", "כ.ו.ה", "מ.כ.ה"], ans: "נ.כ.ה", exp: "הופעל עבר. דגש מעיד על נ' שנפלה (חפ\"נ) וה' בסוף זו גזרת נל\"י/ה." },
+            { word: "מְקַנֵּא", q: "מה הגזרה?", options: ["נל\"א", "נל\"י/ה", "שלמים", "מרובעים"], ans: "נל\"א", exp: "בניין פיעל הווה. האות א' היא חלק מהשורש (ק.נ.א) והיא נחה." },
+            { word: "יַגִּיד", q: "מה הבניין?", options: ["הפעיל", "קל", "פיעל", "נפעל"], ans: "הפעיל", exp: "הפעיל עתיד. שורש נ.ג.ד (להגיד). ה-נ' נפלה." },
+            { word: "הִתְנַבֵּא", q: "מה הגזרה?", options: ["נל\"א", "נל\"י/ה", "מרובעים", "שלמים"], ans: "נל\"א", exp: "בניין התפעל עבר. שורש נ.ב.א (נביא, להתנבא)." },
+            { word: "תֵּאָלֵץ", q: "מה הבניין?", options: ["נפעל", "קל", "התפעל", "פיעל"], ans: "נפעל", exp: "בניין נפעל עתיד (כמו תִּכָּנֵס), אבל בגלל שהשורש מתחיל ב-א' (א.ל.צ) חלים שינויי ניקוד." },
+            { word: "נִרְדַּם", q: "מה הגזרה?", options: ["שלמים", "מרובעים", "נחי פ\"י", "חפ\"נ"], ans: "שלמים", exp: "בניין נפעל משורש ר.ד.מ. כל האותיות נשמעות וקיימות." },
+            { word: "הִצִּיל", q: "מה השורש?", options: ["נ.צ.ל", "צ.י.ל", "צ.ו.ל", "י.צ.ל"], ans: "נ.צ.ל", exp: "בניין הפעיל עבר, ה-נ' חסרה ויש דגש ב-צ'." },
+            { word: "נֵעוֹר", q: "מה השורש?", options: ["ע.ו.ר", "נ.ע.ר", "ע.י.ר", "י.ע.ר"], ans: "ע.ו.ר", exp: "בניין נפעל עבר/הווה מגזרת ע\"ו. (להתעורר -> נעור)." },
+            { word: "תִּטַּע", q: "מה השורש?", options: ["נ.ט.ע", "ט.ו.ע", "י.ט.ע", "מ.ט.ע"], ans: "נ.ט.ע", exp: "בניין קל עתיד (היא תטע עץ). השורש הוא נ.ט.ע, וה-נ' נופלת." },
+            { word: "מֻצָּג", q: "מה השורש?", options: ["י.צ.ג", "נ.צ.ג", "צ.ו.ג", "ה.צ.ג"], ans: "י.צ.ג", exp: "בניין הופעל. גזרת חפי\"צ (חסרי פ' י' / צ')." },
+            { word: "מְשׁוֹרֵר", q: "מה הבניין?", options: ["פיעל", "פועל", "מרובעים", "קל"], ans: "פיעל", exp: "זהו בניין פיעל משורש ש.י.ר / ש.ו.ר (גזרת הכפולים/ע\"ו שנוטים בפיעל המורחב)." },
+            { word: "הֶעֱלָה", q: "מה הבניין?", options: ["הפעיל", "נפעל", "הופעל", "התפעל"], ans: "הפעיל", exp: "בניין הפעיל משורש ע.ל.י/ה. האות ה' מתפקדת כאם קריאה." },
+            { word: "נוֹלַד", q: "מה הגזרה?", options: ["נחי פ\"י", "נחי ע\"ו", "נל\"א", "שלמים"], ans: "נחי פ\"י", exp: "בניין נפעל משורש י.ל.ד. ה-י' הופכת ל-ו'." },
+            { word: "תַּחְשֹׁב", q: "מה הבניין?", options: ["קל", "הפעיל", "נפעל", "פיעל"], ans: "קל", exp: "עתיד של בניין קל, שורש ח.ש.ב." },
+            { word: "הִמְתִּין", q: "מה השורש?", options: ["מ.ת.נ", "מ.ת.ת", "ה.מ.ת", "ת.מ.נ"], ans: "מ.ת.נ", exp: "בניין הפעיל עבר. שורש מ.ת.נ (המתנה)." },
+            { word: "תָּקוּם", q: "מה השורש?", options: ["ק.ו.ם", "ק.מ.ם", "י.ק.ם", "ת.ק.ם"], ans: "ק.ו.ם", exp: "בניין קל עתיד מגזרת ע\"ו." },
+            { word: "נֶאֱמָן", q: "מה הבניין?", options: ["נפעל", "פועל", "קל", "התפעל"], ans: "נפעל", exp: "נפעל בהווה משורש א.מ.נ. בגלל האות הגרונית א', הניקוד משתנה לסגול וחטף סגול." },
+            { word: "יִשָּׁאֵר", q: "מה השורש?", options: ["ש.א.ר", "ש.ר.ר", "י.ש.ר", "נ.ש.ר"], ans: "ש.א.ר", exp: "עתיד נפעל מרובע/שלמים (גרוניים). הדגש ב-ש' הוא דגש חזק תבניתי של בניין נפעל עתיד." },
+            { word: "יָשְׁבוּ", q: "מה הבניין?", options: ["קל", "נפעל", "פועל", "פיעל"], ans: "קל", exp: "קל עבר בגזרת פ\"י/פ\"א (י.ש.ב)." },
+            { word: "נִשְׁמַע", q: "מה הבניין?", options: ["נפעל", "קל", "הופעל", "הפעיל"], ans: "נפעל", exp: "נפעל עבר/הווה מהשורש ש.מ.ע." },
+            { word: "הִגִּיעַ", q: "מה השורש?", options: ["נ.ג.ע", "י.ג.ע", "ה.ג.ע", "ג.ו.ע"], ans: "נ.ג.ע", exp: "הדגש באות ג' מחפה על נ' שנפלה (חפ\"נ)." },
+            { word: "הוֹשִׁיב", q: "מה השורש?", options: ["י.ש.ב", "ש.ו.ב", "ה.ש.ב", "ו.ש.ב"], ans: "י.ש.ב", exp: "בניין הפעיל. האות י' של השורש הפכה ל-ו' (נחי פ\"י)." },
+            { word: "נֵדַע", q: "מה השורש?", options: ["י.ד.ע", "נ.ד.ע", "ד.ו.ע", "א.ד.ע"], ans: "י.ד.ע", exp: "עתיד בניין קל, גזרת פ\"י (ה-י' נעלמת ונשאר צירי)." },
+            { word: "מַכִּיר", q: "מה השורש?", options: ["נ.כ.ר", "כ.ו.ר", "מ.כ.ר", "י.כ.ר"], ans: "נ.כ.ר", exp: "הדגש ב-כ' מעיד על חפ\"נ (להכיר -> נ.כ.ר)." },
+            { word: "מֵבִין", q: "מה הבניין?", options: ["הפעיל", "פיעל", "פועל", "קל"], ans: "הפעיל", exp: "בניין הפעיל הווה מגזרת ע\"ו (ב.ו.נ)." },
+            { word: "הִצִּיג", q: "מה השורש?", options: ["י.צ.ג", "נ.צ.ג", "צ.ו.ג", "ה.צ.ג"], ans: "י.צ.ג", exp: "גזרת חפי\"צ. פעלים ב-י.צ מקבלים דגש ב-צ' בהפעיל." },
+            { word: "מֻכָּר", q: "מה הבניין?", options: ["הופעל", "פועל", "נפעל", "פיעל"], ans: "הופעל", exp: "תחילית מֻ = הופעל. שורש נ.כ.ר." },
+            { word: "נִלְקַח", q: "מה הגזרה?", options: ["חפ\"ל", "חפ\"נ", "שלמים", "נחי פ\"י"], ans: "חפ\"ל", exp: "בשורש ל.ק.ח ה-ל' לעיתים נופלת, אך כאן בבניין נפעל היא קיימת (חפ\"ל)." },
+            { word: "הִזְדַּהָה", q: "מה הבניין?", options: ["התפעל", "נפעל", "הפעיל", "פיעל"], ans: "התפעל", exp: "שיכול עיצורים והידמות בקוליות (ז' גורמת ל-ת' להפוך ל-ד')." },
+            { word: "תָּבִיא", q: "מה הבניין?", options: ["הפעיל", "קל", "נפעל", "פיעל"], ans: "הפעיל", exp: "בניין הפעיל עתיד משורש ב.ו.א." },
+            { word: "מְעַנְיֵן", q: "מה הגזרה?", options: ["מרובעים", "שלמים", "נחי ע\"ו", "נל\"י/ה"], ans: "מרובעים", exp: "בניין פיעל עם שורש בן 4 אותיות: ע.נ.י.נ." },
+            { word: "יִסַּע", q: "מה השורש?", options: ["נ.ס.ע", "י.ס.ע", "ס.ו.ע", "מ.ס.ע"], ans: "נ.ס.ע", exp: "עתיד קל. דגש ב-ס' מעיד על ה-נ' שנפלה (חפ\"נ)." },
+            { word: "הוּקְלוּ", q: "מה הבניין?", options: ["הופעל", "פועל", "נפעל", "הפעיל"], ans: "הופעל", exp: "הופעל עבר בגזרת הכפולים (שורש ק.ל.ל)." },
+            { word: "הִסִּיעַ", q: "מה השורש?", options: ["נ.ס.ע", "י.ס.ע", "ס.ו.ע", "ה.ס.ע"], ans: "נ.ס.ע", exp: "הפעיל עבר. דגש ב-ס' מעיד על חפ\"נ." },
+            { word: "שָׂמִים", q: "מה הגזרה?", options: ["נחי ע\"ו", "שלמים", "נל\"י/ה", "חפ\"נ"], ans: "נחי ע\"ו", exp: "הווה בניין קל משורש ש.ו.ם." },
+            { word: "מִתְמוֹדֵד", q: "מה הגזרה?", options: ["נחי ע\"ו (פולל)", "שלמים", "מרובעים", "נחי פ\"י"], ans: "נחי ע\"ו (פולל)", exp: "בהתפעל, גזרת ע\"ו נוטה פעמים רבות כ'התפולל' (שורש מ.ד.ד/מ.ו.ד)." },
+            { word: "יוּרַד", q: "מה הבניין?", options: ["הופעל", "פועל", "נפעל", "הפעיל"], ans: "הופעל", exp: "הופעל עתיד משורש י.ר.ד (נחי פ\"י)." },
+            { word: "יָכְלוּ", q: "מה הבניין?", options: ["קל", "נפעל", "הפעיל", "פועל"], ans: "קל", exp: "בניין קל עבר משורש י.כ.ל." },
+            { word: "מְרֻצֶּה", q: "מה הגזרה?", options: ["נל\"י/ה", "נל\"א", "שלמים", "מרובעים"], ans: "נל\"י/ה", exp: "בניין פועל הווה. ה' בסוף המילה = נל\"י/ה." },
+            { word: "תִּפָּגְשׁוּ", q: "מה הבניין?", options: ["נפעל", "קל", "התפעל", "פיעל"], ans: "נפעל", exp: "בניין נפעל עתיד. תחילית תִּ + דגש תבניתי ב-פ'." },
+            { word: "הֵנִיחַ", q: "מה השורש?", options: ["נ.ו.ח", "א.נ.ח", "נ.י.ח", "ה.נ.ח"], ans: "נ.ו.ח", exp: "בניין הפעיל עבר מגזרת ע\"ו." },
+            { word: "נִכָּר", q: "מה השורש?", options: ["נ.כ.ר", "כ.ו.ר", "י.כ.ר", "כ.ר.ר"], ans: "נ.כ.ר", exp: "נפעל עבר/הווה. ה-נ' של השורש נבלעת ב-כ' של השורש (דגש)." },
+            { word: "אֶשְׁאַל", q: "מה הבניין?", options: ["קל", "נפעל", "פיעל", "הפעיל"], ans: "קל", exp: "בניין קל עתיד משורש ש.א.ל." },
+            { word: "מוּבָא", q: "מה הגזרה?", options: ["ע\"ו + ל\"א", "ע\"ו בלבד", "חפ\"נ", "נחי פ\"י"], ans: "ע\"ו + ל\"א", exp: "גזרה מורכבת: גם ב.ו.א (ע\"ו) וגם מסתיים ב-א' נחה (ל\"א)." },
+            { word: "הִסְתַּכֵּל", q: "מה הבניין?", options: ["התפעל", "הפעיל", "נפעל", "פיעל"], ans: "התפעל", exp: "בניין התפעל עם שיכול עיצורים (ס')." },
+            { word: "מַקִּיף", q: "מה השורש?", options: ["נ.ק.פ", "י.ק.פ", "ק.ו.פ", "ק.פ.פ"], ans: "נ.ק.פ", exp: "הפעיל הווה. הדגש ב-ק' מעיד על חפ\"נ (להקיף)." },
+            { word: "יֵעָשֶׂה", q: "מה הבניין?", options: ["נפעל", "קל", "הפעיל", "התפעל"], ans: "נפעל", exp: "נפעל עתיד משורש ע.ש.י/ה. ה-ע' גרונית לכן יש שינויי ניקוד." },
+            { word: "מֻפְתָּע", q: "מה הבניין?", options: ["הופעל", "פועל", "נפעל", "הפעיל"], ans: "הופעל", exp: "בניין הופעל. שורש פ.ת.ע." }
+        ],
+        numbers: [
+            // --- שאלות חדשות: שם המספר ---
+            { word: "השעה ___ (12) בצהריים", q: "איך נכתוב?", options: ["שתים עשרה", "שנים עשר", "שתיים עשר", "שני עשרה"], ans: "שתים עשרה", exp: "שעה היא תמיד בנקבה (שעה אחת)." },
+            { word: "___ (3) לילות", q: "איך נכתוב?", options: ["שלושה", "שלוש", "שלושת", "שליש"], ans: "שלושה", exp: "מוקש ידוע! המילה 'לילה' היא זכר (לילה טוב). לכן: שלושה לילות." },
+            { word: "___ (8000) צופים", q: "איך נכתוב?", options: ["שמונת אלפים", "שמונה אלפים", "שמונים אלף", "שמונה אלף"], ans: "שמונת אלפים", exp: "אלף = זכר. צורת הסמיכות של שמונה בזכר היא 'שמונת'." },
+            { word: "הילד ה-___ (4)", q: "מספר סודר:", options: ["רביעי", "רביעית", "ארבעה", "ארבע"], ans: "רביעי", exp: "ילד זה זכר. המספר הסודר לזכר הוא 'רביעי'." },
+            { word: "נשאר עוד ___ (1.5) שקלים", q: "איך קוראים שבר מעורב?", options: ["שקל וחצי", "אחד וחצי", "שקל ומחצית", "חצי שקל"], ans: "שקל וחצי", exp: "קוראים קודם את השלם יחד עם שם העצם (שקל), ואז את השבר (וחצי)." },
+            { word: "___ (10%) מהאוכלוסייה", q: "איך נכתוב אחוזים?", options: ["עשרה אחוזים", "עשר אחוז", "עשרה אחוז", "עשר אחוזים"], ans: "עשרה אחוזים", exp: "המילה 'אחוז' היא זכר (אחוז אחד), והיא צריכה להופיע ברבים: עשרה אחוזים." },
+            { word: "יש לו ___ (2) משקפיים", q: "זכר או נקבה?", options: ["שני", "שתי", "שניים", "שתיים"], ans: "שני", exp: "משקפיים זה זכר (משקפיים יפים). בגלל הסמיכות למשקפיים, אומרים: שני זוגות משקפיים או פשוט שני משקפיים." },
+            { word: "החולצה ה-___ (3)", q: "מספר סודר:", options: ["שלישית", "שלישי", "שלוש", "שלושה"], ans: "שלישית", exp: "חולצה היא נקבה, לכן המספר הסודר יהיה: החולצה השלישית." },
+            { word: "יש פה ___ (11) בנות", q: "בחר.י את התשובה:", options: ["אחת עשרה", "אחד עשר", "אחת עשר", "אחד עשרה"], ans: "אחת עשרה", exp: "בת = נקבה. גם האחדות וגם העשרות חייבות להיות בנקבה: אחת עשרה." },
+            { word: "שנת ___ (2024)", q: "איך קוראים את השנה?", options: ["אלפיים עשרים וארבע", "אלפיים עשרים וארבעה", "שני אלפים ועשרים וארבע", "אלפיים ועשרים וארבעה"], ans: "אלפיים עשרים וארבע", exp: "שנה היא נקבה (שנה טובה), לכן קוראים את השנה בנקבה (ארבע)." },
+            { word: "הגעתי ב- ___ (9) ביוני", q: "תאריכים:", options: ["תשעה", "תשע", "תשעי", "תשיעי"], ans: "תשעה", exp: "תאריכים בחודש תמיד, אבל תמיד, סופרים בזכר. תשעה ביוני." },
+            { word: "___ (400) עמודים", q: "איך כותבים מאות?", options: ["ארבע מאות", "ארבעה מאות", "ארבעת מאות", "רבע מאות"], ans: "ארבע מאות", exp: "מאות סופרים תמיד בנקבה (מאה אחת -> ארבע מאות)." },
+            { word: "הוא גדול ממני פי ___ (10)", q: "ביטויים עם 'פי':", options: ["עשרה", "עשר", "עשרים", "עשירית"], ans: "עשרה", exp: "אחרי 'פי' המספר תמיד יהיה בזכר." },
+            { word: "שילמתי ___ (17) שקלים", q: "זכר/נקבה:", options: ["שבעה עשר", "שבע עשרה", "שבעת עשר", "שבע עשר"], ans: "שבעה עשר", exp: "שקל = זכר. 17 בזכר: שבעה עשר." },
+            { word: "קניתי ___ (2) מכנסיים", q: "הקפדה על מין:", options: ["שני", "שתי", "שניים", "שתיים"], ans: "שני", exp: "מכנסיים זה זכר (מכנס ארוך). לכן: שני מכנסיים." },
+            { word: "יש לי ___ (5) אחיות", q: "זכר/נקבה:", options: ["חמש", "חמישה", "חמשת", "חמישית"], ans: "חמש", exp: "אחות היא נקבה. המספר היסודי לנקבה: חמש." },
+            { word: "חיכינו ___ (1.5) שעות", q: "שברים מעורבים:", options: ["שעה וחצי", "אחת וחצי", "שעות וחצי", "שעה ומחצית"], ans: "שעה וחצי", exp: "כמו בשקלים: השלם עם שם העצם ואז השבר. שעה (אחת) וחצי." },
+            { word: "הוא סיים במקום ה-___ (1)", q: "מספר סודר:", options: ["ראשון", "ראשונה", "אחד", "אחת"], ans: "ראשון", exp: "מקום = זכר. לכן: המקום הראשון." },
+            { word: "___ (3/4) מהפיצה", q: "שברים:", options: ["שלושה רבעים", "שלוש רבעים", "שליש רביעי", "שלושת רבעים"], ans: "שלושה רבעים", exp: "רבע הוא זכר (רבע אחד). לכן אומרים שלושה (זכר) רבעים." },
+            { word: "בת ה-___ (12)", q: "גילאים:", options: ["שתים עשרה", "שנים עשר", "שתיים עשר", "שני עשרה"], ans: "שתים עשרה", exp: "גיל הוא תמיד בנקבה (כמה שנים היא חיה)." },
+            { word: "___ (14) שולחנות", q: "בחר.י:", options: ["ארבעה עשר", "ארבע עשרה", "ארבעת עשר", "ארבע עשר"], ans: "ארבעה עשר", exp: "שולחן הוא זכר (שולחן גדול), למרות שהוא נגמר ב-ות ברבים." },
+            { word: "ה- ___ (15) בחודש מאי", q: "תאריכים:", options: ["חמישה עשר", "חמש עשרה", "חמשת עשר", "חמישי עשר"], ans: "חמישה עשר", exp: "תאריכים בחודש הם בזכר: חמישה עשר." },
+            { word: "קראתי ___ (6) ספרים", q: "בחר.י:", options: ["שישה", "שש", "ששת", "שישית"], ans: "שישה", exp: "ספר = זכר. לכן: שישה." },
+            { word: "___ (2000) מילים", q: "אלפים:", options: ["אלפיים", "שני אלפים", "שתי אלפים", "אלף כפול שתיים"], ans: "אלפיים", exp: "צורת הזוגי של אלף היא אלפיים." },
+            { word: "נפגש בעוד ___ (2) ימים", q: "בחר.י:", options: ["יומיים", "שני ימים", "שתי ימים", "ימיים"], ans: "יומיים", exp: "יום הוא זכר, והצורה המקובלת והתקנית ל-2 ימים היא יומיים." },
+            { word: "פי ___ (6)", q: "בחר.י:", options: ["שישה", "שש", "ששת", "שישית"], ans: "שישה", exp: "תמיד זכר אחרי 'פי'." },
+            { word: "___ (5) הדלתות", q: "סמיכות:", options: ["חמש", "חמשת", "חמישה", "חמישית"], ans: "חמש", exp: "דלתות = נקבה. המספר בסמיכות לנקבה נשאר 'חמש' (לעומת 'חמשת' בזכר)." },
+            { word: "הוא קנה ___ (1) עט", q: "בחר.י:", options: ["אחד", "אחת", "אחדי", "ראשון"], ans: "אחד", exp: "עט הוא זכר (עט כחול). לכן: עט אחד." },
+            { word: "התרגיל ה-___ (10)", q: "מספר סודר:", options: ["עשירי", "עשירית", "עשר", "עשרה"], ans: "עשירי", exp: "תרגיל = זכר. סודר: התרגיל העשירי." },
+            { word: "___ (19) חיילים", q: "בחר.י:", options: ["תשעה עשר", "תשע עשרה", "תשעת עשר", "תשעי עשר"], ans: "תשעה עשר", exp: "חייל = זכר. 19 בזכר: תשעה עשר." },
+            { word: "___ (10,000) צעדים", q: "בחר.י:", options: ["עשרת אלפים", "עשרה אלפים", "עשר אלפים", "עשירית אלפים"], ans: "עשרת אלפים", exp: "אלף = זכר. הסמיכות של עשרה בזכר: עשרת אלפים." },
+            { word: "___ (3) המושבים", q: "סמיכות מיודעת:", options: ["שלושת", "שלוש", "שלושה", "שליש"], ans: "שלושת", exp: "מושב = זכר. בסמיכות, שלושה הופך ל'שלושת' (שלושת המושבים)." },
+            { word: "למדתי ___ (1/2) שעה", q: "שברים:", options: ["חצי", "מחצית", "חצייה", "אחת חלקי שתיים"], ans: "חצי", exp: "צורת השבר הרגילה והתקנית ביומיום היא חצי שעה." },
+            { word: "___ (10) חודשים", q: "איך נכתוב?", options: ["עשרה", "עשר", "עשרת", "עשירית"], ans: "עשרה", exp: "חודש הוא זכר. לכן המספר בזכר: עשרה." },
+            { word: "שנת ___ (1990)", q: "בחר.י:", options: ["אלף תשע מאות תשעים", "אלף תשעה מאות תשעים", "אלף תשע מאות ותשעים", "אלפיים פחות עשר"], ans: "אלף תשע מאות תשעים", exp: "מאות סופרים תמיד בנקבה (תשע מאות)." },
+            { word: "___ (2/3) מהכיתה", q: "שברים:", options: ["שני שלישים", "שתי שליש", "שני שליש", "שתי שלישים"], ans: "שני שלישים", exp: "שליש הוא זכר (שליש אחד). צורת הרבים התקנית היא שלישים, לכן שני שלישים." },
+            { word: "פי ___ (3)", q: "בחר.י:", options: ["שלושה", "שלוש", "שלושת", "שלישית"], ans: "שלושה", exp: "אחרי המילה 'פי' המספר תמיד בזכר." },
+            { word: "בעוד ___ (2) דקות", q: "בחר.י:", options: ["שתי", "שני", "שתיים", "שניים"], ans: "שתי", exp: "דקה היא נקבה. לכן: שתי דקות." },
+            { word: "___ (12) אנשים", q: "בחר.י:", options: ["שנים עשר", "שתים עשרה", "שתיים עשר", "שני עשר"], ans: "שנים עשר", exp: "איש (אנשים) זה זכר. לכן 12 בזכר: שנים עשר." },
+            { word: "___ (1000) פעמים", q: "בחר.י:", options: ["אלף", "אלפים", "עשר מאות", "אלפה"], ans: "אלף", exp: "פעם = נקבה, אבל המילה 'אלף' לא משתנה במין." },
+            { word: "ביום ה-___ (7)", q: "מספר סודר:", options: ["שביעי", "שביעית", "שבעה", "שבע"], ans: "שביעי", exp: "יום הוא זכר, לכן המספר הסודר יהיה: שביעי." },
+            { word: "___ (11) החודשים", q: "סמיכות מיודעת:", options: ["אחד עשר", "אחת עשרה", "אחד עשרה", "אחת עשר"], ans: "אחד עשר", exp: "חודש = זכר. 11 בזכר נשאר 'אחד עשר' גם כשיש ה' הידיעה לאחר מכן." },
+            { word: "קניתי ___ (4) חולצות", q: "בחר.י:", options: ["ארבע", "ארבעה", "ארבעת", "רביעית"], ans: "ארבע", exp: "חולצה = נקבה. המספר בנקבה הוא ארבע." },
+            { word: "יש שם ___ (18) נשים", q: "בחר.י:", options: ["שמונה עשרה", "שמונה עשר", "שמונת עשר", "שמונת עשרה"], ans: "שמונה עשרה", exp: "אישה (נשים) = נקבה. 18 בנקבה: שמונה עשרה." },
+            { word: "חילקתי ל- ___ (3) חלקים", q: "בחר.י:", options: ["שלושה", "שלוש", "שלושת", "שליש"], ans: "שלושה", exp: "חלק הוא זכר (חלק אחד). לכן המספר בזכר: שלושה." },
+            { word: "___ (13) מטבעות", q: "זכר או נקבה?", options: ["שלושה עשר", "שלוש עשרה", "שלושת עשר", "שלוש עשר"], ans: "שלושה עשר", exp: "מטבע הוא זכר (מטבע עתיק), למרות שהוא נגמר ב-ות ברבים." },
+            { word: "___ (6) האמהות", q: "סמיכות:", options: ["שש", "ששת", "שישה", "שישית"], ans: "שש", exp: "אם = נקבה. בסמיכות לנקבה משתמשים בצורת היסוד: שש." },
+            { word: "עברו ___ (200) שנה", q: "בחר.י:", options: ["מאתיים", "שתי מאות", "שני מאות", "שתיים מאות"], ans: "מאתיים", exp: "הצורה התקנית ל-200 היא מילה אחת: מאתיים." },
+            { word: "___ (14) צמתים", q: "זכר או נקבה?", options: ["ארבעה עשר", "ארבע עשרה", "ארבעת עשר", "ארבע עשר"], ans: "ארבעה עשר", exp: "צומת הוא זכר (צומת מרומזר). לכן נשתמש בזכר." },
+            { word: "___ (5) פנים", q: "זכר או נקבה?", options: ["חמש / חמישה", "חמש בלבד", "חמישה בלבד", "חמשת"], ans: "חמש / חמישה", exp: "המילה פנים (face) יכולה להיות גם זכר וגם נקבה, לכן שתי הצורות תקינות!" },
+            { word: "___ (700)", q: "בחר.י:", options: ["שבע מאות", "שבעה מאות", "שבעת מאות", "שביעית מאות"], ans: "שבע מאות", exp: "מאות סופרים תמיד בנקבה." },
+            { word: "החלק ה-___ (10)", q: "מספר סודר:", options: ["עשירי", "עשירית", "עשר", "עשרה"], ans: "עשירי", exp: "חלק = זכר. סודר: העשירי." },
+            { word: "___ (9) כוסות", q: "בחר.י:", options: ["תשע", "תשעה", "תשעת", "תשיעית"], ans: "תשע", exp: "כוס היא נקבה (כוס גדולה). המספר בנקבה: תשע." },
+            { word: "בשעה ___ (1:00)", q: "בחר.י:", options: ["אחת", "אחד", "ראשונה", "ראשון"], ans: "אחת", exp: "שעה היא נקבה. שעה אחת." },
+            { word: "___ (10,000) שקלים", q: "בחר.י:", options: ["עשרת אלפים", "עשרה אלפים", "עשר אלפים", "עשירית אלף"], ans: "עשרת אלפים", exp: "אלף הוא זכר, לכן משתמשים בסמיכות זכר 'עשרת'." },
+            { word: "___ (5) שורות", q: "בחר.י:", options: ["חמש", "חמישה", "חמשת", "חמישית"], ans: "חמש", exp: "שורה = נקבה. מספר בנקבה: חמש." },
+            { word: "הגעתי למקום ה-___ (11)", q: "מספר סודר מורכב:", options: ["אחד עשר", "אחת עשרה", "ראשון עשר", "האחד עשר"], ans: "אחד עשר", exp: "מ-11 ומעלה אין מספר סודר מיוחד. משתמשים במספר הרגיל בתוספת ה' הידיעה." },
+            { word: "___ (3) תפוחים", q: "בחר.י:", options: ["שלושה", "שלוש", "שלושת", "שליש"], ans: "שלושה", exp: "תפוח = זכר. המספר בזכר: שלושה." },
+            { word: "___ (8) האצבעות", q: "סמיכות:", options: ["שמונה", "שמונת", "שמונים", "שמנה"], ans: "שמונה", exp: "אצבע = נקבה. סמיכות נקבה נשארת צורת היסוד: שמונה האצבעות." }
+        ]
+    };
+
+    exams.mixed = [...exams.verbs, ...exams.numbers].sort(() => Math.random() - 0.5);
+
+    let currentPool = [];
+    let score = 0;
+    let skipsLeft = 5; 
+    let currentIdx = -1;
+    let currentItem = null;
+    let streak = 0;
+    let fiftyFiftyUsed = false;
+    
+    let isBombActive = false;
+    let bombAlertShown = false;
+    let timerInterval;
+    let timeLeft = 15;
+
+    function startExam(type) {
+        currentPool = JSON.parse(JSON.stringify(exams[type])); 
+        document.getElementById('menu-screen').style.display = 'none';
+        document.getElementById('main-game').style.display = 'block';
+        loadNext();
+    }
+
+    function triggerBombMode() {
+        if (!bombAlertShown) {
+            bombAlertShown = true;
+            isBombActive = true;
+            const alertScreen = document.getElementById('bomb-alert');
+            alertScreen.style.display = 'flex';
+            setTimeout(() => {
+                alertScreen.style.display = 'none';
+                document.getElementById('timer-box').style.display = 'block';
+                startTimer();
+            }, 3000);
+        } else {
+            startTimer();
+        }
+    }
+
+    function startTimer() {
+        clearInterval(timerInterval);
+        timeLeft = 15;
+        document.getElementById('time-left').innerText = timeLeft;
+        timerInterval = setInterval(() => {
+            timeLeft--;
+            document.getElementById('time-left').innerText = timeLeft;
+            if (timeLeft <= 0) {
+                clearInterval(timerInterval);
+                timeRanOut();
+            }
+        }, 1000);
+    }
+
+    function timeRanOut() {
+        score -= 5;
+        streak = 0;
+        updateStreakUI();
+        updateStats();
+        document.getElementById('feedback-title').innerText = "⏳ הזמן נגמר!";
+        document.getElementById('correct-ans-display').innerText = `התשובה הנכונה: ${currentItem.ans}`;
+        document.getElementById('feedback-text').innerText = "בשלב הפצצה חובה לענות מהר! \n\n" + currentItem.exp;
+        document.getElementById('feedback-modal').style.display = 'flex';
+    }
+
+    function loadNext() {
+        clearInterval(timerInterval);
+        if (score >= 100) { winGame(); return; }
+        if (skipsLeft < 0) return; 
+        if (currentPool.length === 0) { alert("סיימת את כל השאלות! הניקוד: " + score); location.reload(); return; }
+
+        currentIdx = Math.floor(Math.random() * currentPool.length);
+        currentItem = currentPool[currentIdx];
+        
+        document.getElementById('target-word').innerText = currentItem.word;
+        document.getElementById('question-label').innerText = currentItem.q;
+        
+        const container = document.getElementById('options-container');
+        container.innerHTML = '';
+        
+        let shuffled = [...currentItem.options].sort(() => Math.random() - 0.5);
+        shuffled.forEach(opt => {
+            const btn = document.createElement('button');
+            btn.className = 'opt-btn';
+            btn.innerText = opt;
+            btn.onclick = () => checkAnswer(opt, btn);
+            container.appendChild(btn);
+        });
+
+        if (score >= 50) { triggerBombMode(); }
+    }
+
+    function checkAnswer(selected, btnElement) {
+        clearInterval(timerInterval);
+        if (selected === currentItem.ans) {
+            score += 10;
+            streak++;
+            updateStreakUI();
+            if (streak > 0 && streak % 3 === 0) { score += 5; }
+
+            currentPool.splice(currentIdx, 1); 
+            updateStats();
+            loadNext();
+        } else {
+            score -= 5;
+            streak = 0;
+            updateStreakUI();
+            updateStats();
+            document.getElementById('feedback-title').innerText = "אופס, טעות! 😬";
+            document.getElementById('correct-ans-display').innerText = `התשובה הנכונה: ${currentItem.ans}`;
+            document.getElementById('feedback-text').innerText = currentItem.exp;
+            document.getElementById('feedback-modal').style.display = 'flex';
+        }
+    }
+
+    function closeFeedbackAndContinue() {
+        document.getElementById('feedback-modal').style.display = 'none';
+        currentPool.splice(currentIdx, 1); 
+        loadNext();
+    }
+
+    function useFiftyFifty() {
+        if (fiftyFiftyUsed) return;
+        fiftyFiftyUsed = true;
+        document.getElementById('btn-5050').disabled = true;
+        const buttons = document.querySelectorAll('.opt-btn');
+        let incorrectBtns = [];
+        buttons.forEach(btn => { if (btn.innerText !== currentItem.ans) incorrectBtns.push(btn); });
+        incorrectBtns.sort(() => Math.random() - 0.5);
+        if (incorrectBtns.length >= 2) {
+            incorrectBtns[0].style.visibility = 'hidden';
+            incorrectBtns[1].style.visibility = 'hidden';
+        }
+    }
+
+    function skipCurrent() {
+        if (skipsLeft <= 0) {
+            alert("נגמרו הדילוגים! את.ה חייב.ת לענות.");
+            return;
+        }
+        clearInterval(timerInterval);
+        skipsLeft--; 
+        streak = 0; 
+        updateStreakUI();
+        currentPool.splice(currentIdx, 1); 
+        updateStats(); 
+        
+        document.getElementById('skip-btn-count').innerText = skipsLeft;
+        if(skipsLeft === 0) {
+            document.querySelector('.skip-btn').style.opacity = '0.5';
+            document.querySelector('.skip-btn').style.cursor = 'not-allowed';
+        }
+        
+        loadNext();
+    }
+
+    function updateStreakUI() {
+        document.getElementById('streak-display').innerText = streak === 0 ? '' : '🔥'.repeat(streak);
+    }
+
+    function updateStats() {
+        document.getElementById('score').innerText = score;
+        document.getElementById('skips-left').innerText = skipsLeft;
+        document.getElementById('progress-fill').style.width = Math.max(0, Math.min(score, 100)) + "%";
+    }
+
+    function winGame() {
+        clearInterval(timerInterval);
+        document.getElementById('main-game').style.display = 'none';
+        document.getElementById('victory-screen').style.display = 'block';
+        let audio = document.getElementById('applause-snd');
+        audio.volume = 0.8; audio.play().catch(e => console.log("Play blocked"));
+    }
+</script>
+
+</body>
+</html>
